@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scrum-Simulator — Interactive Tour</title>
+<style>
+  :root { --bg:#04141a; --accent:#06B6D4; --panel:#0000002e; --text:#e6e6e6; --muted:#9aa0a6;
+          --todo:#64748b; --doing:#d97706; --done:#059669; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); }
+  header { padding:18px 24px; border-bottom:1px solid #ffffff14; }
+  header h1 { margin:0; font-size:18px; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:13px; }
+  .badge { display:inline-block; background:var(--accent); color:#000; font-size:11px; font-weight:700;
+           padding:2px 8px; border-radius:4px; margin-left:8px; vertical-align:middle; }
+  .pills { display:flex; gap:8px; padding:12px 24px; flex-wrap:wrap; }
+  .pill { padding:6px 12px; border-radius:999px; font-size:12px; cursor:pointer; background:var(--panel);
+          border:1px solid #ffffff1a; color:var(--muted); }
+  .pill.active { background:var(--accent); color:#000; font-weight:600; border-color:var(--accent); }
+  main { display:grid; grid-template-columns:1fr 1fr; gap:0; min-height:64vh; }
+  .lesson, .practice { padding:24px; }
+  .lesson { border-right:1px solid #ffffff14; overflow:auto; }
+  .lesson h2 { color:var(--accent); margin-top:0; }
+  .lesson ul { padding-left:18px; } .lesson li { margin:5px 0; }
+  .lesson code { background:#ffffff12; padding:1px 5px; border-radius:4px; font-size:12px; }
+  .practice h3 { margin-top:0; color:var(--muted); text-transform:uppercase; font-size:12px; letter-spacing:1px; }
+  button { background:var(--accent); color:#000; border:0; border-radius:8px; padding:9px 14px; font-weight:600; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--accent); border:1px solid var(--accent); }
+  button:disabled { opacity:.4; cursor:not-allowed; }
+  nav { display:flex; justify-content:space-between; padding:16px 24px; border-top:1px solid #ffffff14; }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .cap { background:#0000005c; border:1px solid #ffffff1a; color:var(--text); border-radius:6px; padding:6px 8px; width:60px; }
+  .board { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+  .col { background:#00000033; border:1px solid #ffffff12; border-radius:8px; padding:8px; min-height:120px; }
+  .col h4 { margin:0 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+  .col.todo h4 { color:var(--todo); } .col.doing h4 { color:var(--doing); } .col.done h4 { color:var(--done); }
+  .card { background:#0b1f27; border:1px solid #ffffff1a; border-radius:6px; padding:7px 8px; margin-bottom:6px; font-size:12px; cursor:pointer; }
+  .card:hover { border-color:var(--accent); }
+  .card .pts { float:right; background:#ffffff14; border-radius:10px; padding:0 7px; font-size:11px; }
+  .backlog .card { cursor:default; display:flex; justify-content:space-between; align-items:center; gap:6px; }
+  .poker button { padding:3px 8px; font-size:11px; margin-left:3px; }
+  .stat { display:inline-block; margin-right:16px; font-size:13px; } .stat b { color:var(--accent); }
+  svg { width:100%; height:150px; background:#00000033; border-radius:8px; margin-top:8px; }
+  .q { margin:12px 0; padding:12px; background:#ffffff08; border-radius:8px; }
+  .q p { margin:0 0 8px; font-weight:600; }
+  .q label { display:block; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:13px; }
+  .q label:hover { background:#ffffff0f; }
+  .q .fb { margin-top:8px; font-size:13px; display:none; }
+  .ok { color:#34d399; } .no { color:#f87171; }
+  .cyu { border-left:3px solid var(--accent); background:#ffffff0a; padding:10px 12px; border-radius:4px; margin-top:6px; font-size:13px; }
+  table.cheat { width:100%; border-collapse:collapse; font-size:12px; margin-top:8px; }
+  table.cheat td, table.cheat th { border:1px solid #ffffff14; padding:6px 8px; text-align:left; vertical-align:top; }
+  table.cheat th { color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Scrum-Simulator<span class="badge">Chain H</span></h1>
+  <p>Interactive tour · Left: the lesson. Right: run a real sprint — estimate, commit, work the board, read the burndown.</p>
+</header>
+<div class="pills" id="pills"></div>
+<main>
+  <section class="lesson" id="lesson"></section>
+  <section class="practice">
+    <h3 id="pracTitle">Sprint simulator</h3>
+    <div id="sim"></div>
+  </section>
+</main>
+<nav>
+  <button class="ghost" onclick="go(-1)">← Previous</button>
+  <span id="counter" style="color:var(--muted);font-size:13px"></span>
+  <button class="ghost" onclick="go(1)">Next →</button>
+</nav>
+<script>
+// ---------- Lesson content ----------
+const LESSONS = [
+ { short:"Scrum in a picture", title:"Scrum in one picture — empiricism",
+   body:`<p>Scrum is a lightweight framework for delivering value in short cycles under uncertainty. It rests on <b>empiricism</b>: you learn by doing, then adapt.</p>
+   <ul><li><b>Transparency</b> — the work + progress are visible to everyone (that's what the board and burndown are for).</li>
+   <li><b>Inspection</b> — you check progress toward the goal frequently (the events).</li>
+   <li><b>Adaptation</b> — when something's off, you adjust quickly (re-plan, not wait).</li></ul>
+   <p><b>Values:</b> commitment, focus, openness, respect, courage.</p>
+   <p style="color:var(--muted)">→ On the right, this is your sprint. Start by estimating the backlog (step 4).</p>` },
+ { short:"Accountabilities", title:"The three accountabilities",
+   body:`<ul><li><b>Product Owner</b> — owns the <i>what</i> and the <i>order</i>: maximizes value, orders the Product Backlog. One person, not a committee.</li>
+   <li><b>Scrum Master</b> — owns the <i>process</i>: coaches the team, removes impediments, protects the sprint. A servant-leader, not a boss.</li>
+   <li><b>Developers</b> — own the <i>how</i> and the <i>estimate</i>: they build the Increment and decide how much they can commit.</li></ul>
+   <p class="cyu"><b>Why estimates belong to the Developers:</b> the people doing the work are the only ones who can size it honestly. When managers set estimates, teams over-commit and quality suffers.</p>` },
+ { short:"Artifacts", title:"Artifacts & their commitments",
+   body:`<ul><li><b>Product Backlog</b> → commitment: the <b>Product Goal</b>. An ordered, ever-refined list of everything that might be built.</li>
+   <li><b>Sprint Backlog</b> → commitment: the <b>Sprint Goal</b>. What the team commits to this sprint + a plan to get there.</li>
+   <li><b>Increment</b> → commitment: the <b>Definition of Done</b>. A usable, <i>done</i> slice of product each sprint.</li></ul>
+   <p>"Done" means <b>done</b> — tested, integrated, shippable — not "done except…". The DoD is the shared quality bar.</p>` },
+ { short:"Estimation", title:"Estimation & planning poker",
+   body:`<p>Teams estimate in <b>story points</b> — relative size (complexity + effort + uncertainty), not hours. Relative sizing is faster and more honest than guessing clock time.</p>
+   <ul><li><b>Planning poker:</b> everyone sizes each story privately (1, 2, 3, 5, 8…), reveals together, discusses outliers, re-votes.</li>
+   <li><b>Velocity:</b> the points a team actually completes per sprint. Use the average to commit realistically.</li></ul>
+   <p style="color:var(--muted)">→ Estimate each backlog item on the right using the point buttons.</p>` },
+ { short:"Sprint planning", title:"Sprint planning — commit by capacity",
+   body:`<p>In <b>Sprint Planning</b> the team answers: <i>why</i> this sprint (the Sprint Goal), <i>what</i> can be done (pull items by capacity), and <i>how</i> (a plan).</p>
+   <p>Commit to points near your <b>capacity/velocity</b> — not "everything the PO wants." Over-commitment is the #1 cause of a broken sprint.</p>
+   <p style="color:var(--muted)">→ Set a capacity and click <b>Commit sprint</b>. Items pull into the board until capacity is reached.</p>` },
+ { short:"Run the sprint", title:"Run the sprint — board + burndown",
+   body:`<p>During the sprint the team works the board and holds a <b>Daily Scrum</b> (15 min): a plan for the next 24h toward the Sprint Goal — <i>not</i> a status report to a manager.</p>
+   <ul><li>Move a card by clicking it: <b>To Do → In Progress → Done</b>.</li>
+   <li><b>Advance day</b> to record remaining points on the <b>burndown</b>.</li></ul>
+   <p class="cyu"><b>Reading a burndown:</b> tracking the ideal line = healthy. Flat then a last-day cliff = work wasn't really "done" until the end. A line that goes <i>up</i> = scope was added mid-sprint (scope creep).</p>` },
+ { short:"Review & retro", title:"Review & retrospective",
+   body:`<ul><li><b>Sprint Review</b> — inspect the Increment <i>with stakeholders</i>; gather feedback; adapt the Product Backlog. It's a working session, not a demo theater.</li>
+   <li><b>Sprint Retrospective</b> — the team inspects <i>itself</i> (people, process, tools) and commits to <b>one concrete improvement</b> for next sprint.</li></ul>
+   <p class="cyu"><b>Anti-pattern:</b> a retro that ends with venting and no action item. If nothing changes, the retro was theater. Pick one improvement and actually do it.</p>
+   <p style="color:var(--muted)">→ Write one retro action on the right.</p>` },
+ { short:"Cheat sheet + quiz", title:"Key objectives & cheat sheet",
+   body:`<p><b>Keep-forever summary</b> (full version in <code>docs/CHEATSHEET.md</code>):</p>
+   <table class="cheat"><tr><th>Thing</th><th>One-liner</th></tr>
+   <tr><td>Pillars</td><td>Transparency · Inspection · Adaptation</td></tr>
+   <tr><td>PO</td><td>Owns <i>what</i> + order (value)</td></tr>
+   <tr><td>Scrum Master</td><td>Owns the <i>process</i>; removes impediments</td></tr>
+   <tr><td>Developers</td><td>Own <i>how</i> + the estimate</td></tr>
+   <tr><td>Sprint Goal</td><td>The one objective the sprint commits to</td></tr>
+   <tr><td>DoD</td><td>Shared quality bar for "done"</td></tr>
+   <tr><td>Velocity</td><td>Points completed/sprint → commit by it</td></tr>
+   <tr><td>Burndown up</td><td>= scope creep; flat-then-cliff = not really done</td></tr></table>
+   <h3 style="color:var(--accent);margin:16px 0 4px">Quiz — Check Your Understanding</h3>
+   <div id="quiz"></div>` }
+];
+
+// ---------- Sprint simulator state ----------
+const BACKLOG = [
+  { id:1, t:"Login with email + password", pts:0 },
+  { id:2, t:"Password reset email", pts:0 },
+  { id:3, t:"Profile page", pts:0 },
+  { id:4, t:"Search with filters", pts:0 },
+  { id:5, t:"Export results to CSV", pts:0 },
+  { id:6, t:"Admin audit log", pts:0 },
+];
+let committed = [];          // {id,t,pts,col} col: 0 todo,1 doing,2 done
+let day = 0, burn = [];      // burndown samples: remaining points per recorded day
+const SPRINT_DAYS = 6;
+
+function totalCommitted(){ return committed.reduce((s,c)=>s+c.pts,0); }
+function remaining(){ return committed.filter(c=>c.col<2).reduce((s,c)=>s+c.pts,0); }
+
+function estimate(id, pts){ const b=BACKLOG.find(x=>x.id===id); b.pts=pts; renderSim(); }
+
+function commitSprint(){
+  const cap = Math.max(1, parseInt(document.getElementById('cap').value)||13);
+  committed = []; day=0; burn=[];
+  let used=0;
+  for(const b of BACKLOG){ if(b.pts>0 && used+b.pts<=cap){ committed.push({...b, col:0}); used+=b.pts; } }
+  burn=[{d:0, r:remaining()}];
+  renderSim();
+}
+function moveCard(id){ const c=committed.find(x=>x.id===id); if(c && c.col<2){ c.col++; renderSim(); } }
+function advanceDay(){
+  if(day>=SPRINT_DAYS) return;
+  day++;
+  // auto-progress: finish some in-progress work, pull some to-do into progress
+  committed.filter(c=>c.col===1).slice(0,2).forEach(c=>c.col=2);
+  committed.filter(c=>c.col===0).slice(0,2).forEach(c=>c.col=1);
+  burn.push({d:day, r:remaining()});
+  renderSim();
+}
+function addScope(){ // demonstrate scope creep on the burndown
+  committed.push({ id:99, t:"⚠ Stakeholder add: dashboard", pts:5, col:0 });
+  if(burn.length) burn[burn.length-1].r = remaining();
+  renderSim();
+}
+
+function burndownSVG(){
+  const W=300,H=150,pad=24, start=committed.length? totalCommitted():13;
+  const x=d=>pad+(W-2*pad)*(d/SPRINT_DAYS);
+  const y=r=>H-pad-(H-2*pad)*(start? r/start:0);
+  const ideal=`M ${x(0)} ${y(start)} L ${x(SPRINT_DAYS)} ${y(0)}`;
+  const actual = burn.map((p,i)=>`${i?'L':'M'} ${x(p.d)} ${y(p.r)}`).join(' ');
+  const dots = burn.map(p=>`<circle cx="${x(p.d)}" cy="${y(p.r)}" r="3" fill="#06B6D4"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}">
+    <line x1="${pad}" y1="${H-pad}" x2="${W-pad}" y2="${H-pad}" stroke="#ffffff22"/>
+    <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${H-pad}" stroke="#ffffff22"/>
+    <path d="${ideal}" stroke="#ffffff44" stroke-dasharray="4 4" fill="none"/>
+    <path d="${actual}" stroke="#06B6D4" stroke-width="2" fill="none"/>${dots}
+    <text x="${W-pad}" y="${H-8}" fill="#9aa0a6" font-size="10" text-anchor="end">day →</text>
+    <text x="6" y="${pad}" fill="#9aa0a6" font-size="10">pts</text>
+    <text x="${pad+4}" y="${pad-6}" fill="#ffffff66" font-size="9">— ideal ┈ · actual —</text>
+  </svg>`;
+}
+
+function renderSim(){
+  const sized = BACKLOG.filter(b=>b.pts>0).length;
+  const done = committed.filter(c=>c.col===2).length;
+  const sim = `
+    <div class="controls">
+      <span class="stat">Capacity <input class="cap" id="cap" value="13"></span>
+      <button onclick="commitSprint()">Commit sprint</button>
+      <button class="ghost" onclick="advanceDay()" ${committed.length?'':'disabled'}>Advance day (${day}/${SPRINT_DAYS})</button>
+      <button class="ghost" onclick="addScope()" ${committed.length?'':'disabled'} title="See scope creep on the burndown">+ Scope</button>
+    </div>
+    <div class="stat">Sized: <b>${sized}/6</b></div>
+    <div class="stat">Committed: <b>${totalCommitted()}</b> pts</div>
+    <div class="stat">Remaining: <b>${remaining()}</b></div>
+    <div class="stat">Velocity: <b>${day>=SPRINT_DAYS||remaining()===0?committed.filter(c=>c.col===2).reduce((s,c)=>s+c.pts,0):'—'}</b></div>
+
+    <div class="backlog" style="margin:10px 0">
+      <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Product Backlog — estimate (planning poker)</div>
+      ${BACKLOG.map(b=>`<div class="card"><span>${b.t}</span>
+        <span class="poker">${[1,2,3,5,8].map(p=>`<button class="ghost" onclick="estimate(${b.id},${p})" style="${b.pts===p?'background:var(--accent);color:#000':''}">${p}</button>`).join('')}</span></div>`).join('')}
+    </div>
+
+    <div style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;margin:10px 0 4px">Sprint board — click a card to advance it</div>
+    <div class="board">
+      ${[['todo','To Do',0],['doing','In Progress',1],['done','Done',2]].map(([cls,label,ci])=>`
+        <div class="col ${cls}"><h4>${label}</h4>
+          ${committed.filter(c=>c.col===ci).map(c=>`<div class="card" onclick="moveCard(${c.id})">${c.t}<span class="pts">${c.pts}</span></div>`).join('') || '<div style="color:#ffffff33;font-size:11px">—</div>'}
+        </div>`).join('')}
+    </div>
+    ${committed.length?burndownSVG():'<p style="color:var(--muted);font-size:12px;margin-top:10px">Estimate items, set a capacity, and Commit a sprint to see the burndown.</p>'}
+  `;
+  document.getElementById('sim').innerHTML = sim;
+}
+
+// ---------- Retro panel (step 7) ----------
+function retroPanel(){
+  document.getElementById('sim').innerHTML = `
+    <p style="color:var(--muted);font-size:13px">Retrospective — one concrete improvement for next sprint:</p>
+    <textarea id="retro" style="width:100%;min-height:90px;background:#0000005c;color:var(--text);border:1px solid #ffffff1a;border-radius:8px;padding:10px" placeholder="e.g. 'Stop pulling unestimated stories mid-sprint.'"></textarea>
+    <button onclick="saveRetro()" style="margin-top:8px">Commit action</button>
+    <p id="retroOut" style="font-size:13px;margin-top:8px"></p>`;
+}
+function saveRetro(){
+  const v=document.getElementById('retro').value.trim();
+  document.getElementById('retroOut').innerHTML = v
+    ? `<span class="ok">✓ Committed:</span> "${v}" — now make it visible next sprint and check it in the following retro.`
+    : `<span class="no">A retro without an action is theater. Write one improvement.</span>`;
+}
+
+// ---------- Quiz (step 8) ----------
+const QUIZ = [
+ { q:"Who owns the story-point estimates?", a:["The Product Owner","The Scrum Master","The Developers"], correct:2,
+   why:"The people doing the work size it — that's the only honest estimate. PO owns order; SM owns process." },
+ { q:"Mid-sprint, a stakeholder wants to add a story. What's Scrum-aligned?", a:["Add it to this sprint","Add it to the Product Backlog for future planning","Cancel the sprint"], correct:1,
+   why:"The Sprint Backlog is the team's commitment. New work goes to the Product Backlog; the PO can re-order it for a later sprint (only the PO can cancel a sprint, and only if the Sprint Goal is obsolete)." },
+ { q:"A burndown line that trends UP means…", a:["The team is ahead","Scope was added (scope creep)","The estimates were too high"], correct:1,
+   why:"Remaining work grew — points were added mid-sprint. A healthy line trends down toward the ideal." },
+ { q:"The Daily Scrum is best described as…", a:["A status report to the manager","A 15-min plan for the next 24h toward the Sprint Goal","An estimation session"], correct:1,
+   why:"It's for the Developers to inspect progress and re-plan — not a status meeting for a boss." },
+];
+function renderQuiz(){
+  const el=document.getElementById('quiz'); if(!el) return;
+  el.innerHTML = QUIZ.map((item,qi)=>`<div class="q"><p>${qi+1}. ${item.q}</p>
+    ${item.a.map((opt,oi)=>`<label><input type="radio" name="q${qi}" value="${oi}" onchange="checkQ(${qi})"> ${opt}</label>`).join('')}
+    <div class="fb" id="fb${qi}"></div></div>`).join('') +
+    `<p id="score" style="font-weight:600"></p>`;
+}
+let answered={};
+function checkQ(qi){
+  const sel=document.querySelector(`input[name=q${qi}]:checked`); if(!sel) return;
+  const item=QUIZ[qi], ok=+sel.value===item.correct, fb=document.getElementById('fb'+qi);
+  fb.style.display='block';
+  fb.innerHTML=(ok?`<span class="ok">✓ Correct.</span> `:`<span class="no">✗ Not quite.</span> `)+
+    `<div class="cyu"><b>Check your understanding:</b> ${item.why}</div>`;
+  answered[qi]=ok;
+  const got=Object.values(answered).filter(Boolean).length;
+  document.getElementById('score').textContent=`Score: ${got} / ${QUIZ.length}`;
+}
+
+// ---------- Tour navigation ----------
+let i=0;
+function render(){
+  const l=LESSONS[i];
+  document.getElementById('lesson').innerHTML='<h2>'+l.title+'</h2>'+l.body;
+  document.getElementById('counter').textContent=(i+1)+' / '+LESSONS.length;
+  document.querySelectorAll('.pill').forEach((p,idx)=>p.classList.toggle('active',idx===i));
+  const pt=document.getElementById('pracTitle');
+  if(i===6){ pt.textContent='Retrospective'; retroPanel(); }
+  else if(i===7){ pt.textContent='Quiz'; document.getElementById('sim').innerHTML='<p style="color:var(--muted);font-size:13px">Answer on the left — each choice reveals a Check-Your-Understanding note.</p>'; renderQuiz(); }
+  else { pt.textContent='Sprint simulator'; renderSim(); }
+}
+function go(d){ i=Math.max(0,Math.min(LESSONS.length-1,i+d)); render(); }
+const pills=document.getElementById('pills');
+LESSONS.forEach((l,idx)=>{ const b=document.createElement('div'); b.className='pill';
+  b.textContent=(idx+1)+'. '+l.short; b.onclick=()=>{i=idx;render();}; pills.appendChild(b); });
+render();
+</script>
+</body>
+</html>
