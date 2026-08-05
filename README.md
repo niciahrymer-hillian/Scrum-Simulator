@@ -4,7 +4,7 @@
 
 ![Chain%20H](https://img.shields.io/badge/Chain%20H-06B6D4?style=for-the-badge) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge)](LICENSE-GPL) [![License: AGPL v3](https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge)](LICENSE-AGPL)
 
-[📖 Lesson Plan](docs/LESSON_PLAN.md) · [🎮 Interactive Tour](docs/interactive/index.html) · [🧾 Cheat Sheet](docs/CHEATSHEET.md)
+[📖 Lesson Plan](docs/LESSON_PLAN.md) · [🧾 Cheat Sheet](docs/CHEATSHEET.md)
 
 <!-- SCREENSHOT PLACEHOLDER: docs/screenshots/board.png -->
 
